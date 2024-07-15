@@ -2,14 +2,13 @@ package sus.keiger.ghdf;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.Path;
 
 public interface IGHDFWriter
 {
     // Static methods.
-    static IGHDFWriter Version1()
+    static IGHDFWriter GetVersion1()
     {
-        return null;
+        return new GHDFWriterVersion1();
     }
 
 

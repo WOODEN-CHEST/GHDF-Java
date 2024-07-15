@@ -9,44 +9,44 @@ public class GHDFCompound
 
 
     // Methods.
-    public void setEntry(int id, Object value)
+    public void SetEntry(int id, Object value)
     {
-        verifyID(id);
+        VerifyID(id);
         _entries.put(id, new GHDFEntry(value));
     }
 
-    public void removeEntry(int id)
+    public void RemoveEntry(int id)
     {
-        verifyID(id);
+        VerifyID(id);
         _entries.remove(id);
     }
 
-    public <T> T getEntry(int id)
+    public <T> T GetEntry(int id)
     {
-        return getEntry(id, null, null, false);
+        return GetEntry(id, null, null, false);
     }
 
-    public <T> T getOrElse(int id, T elseValue)
+    public <T> T GetOrElse(int id, T elseValue)
     {
-        return getEntry(id, elseValue, null, false);
+        return GetEntry(id, elseValue, null, false);
     }
 
-    public <T> T getVerifiedEntry(int id, GHDFType expectedType)
+    public <T> T GetVerifiedEntry(int id, GHDFType expectedType)
     {
-        return getEntry(id, null, expectedType, true);
+        return GetEntry(id, null, expectedType, true);
     }
 
-    public <T> T getVerifiedOptionalEntry(int id, GHDFType expectedType)
+    public <T> T GetVerifiedOptionalEntry(int id, GHDFType expectedType)
     {
-        return getEntry(id, null, expectedType, false);
+        return GetEntry(id, null, expectedType, false);
     }
 
-    public void clear()
+    public void Clear()
     {
         _entries.clear();
     }
 
-    public GHDFType getTypeOfEntry(int id)
+    public GHDFType GetTypeOfEntry(int id)
     {
         GHDFEntry Entry = _entries.get(id);
         if (Entry == null)
@@ -56,17 +56,17 @@ public class GHDFCompound
         return Entry.Type;
     }
 
-    public Set<Integer> getIDs()
+    public Set<Integer> GetIDs()
     {
         return _entries.keySet();
     }
 
-    public List<Object> getValues()
+    public List<Object> GetValues()
     {
         return _entries.values().stream().map(entry -> entry.Value).toList();
     }
 
-    public int size()
+    public int Size()
     {
         return _entries.size();
     }
@@ -74,9 +74,9 @@ public class GHDFCompound
 
     // Private methods.
     @SuppressWarnings("unchecked")
-    private <T> T getEntry(int id, T elseValue, GHDFType expectedType, boolean isMandatory)
+    private <T> T GetEntry(int id, T elseValue, GHDFType expectedType, boolean isMandatory)
     {
-        verifyID(id);
+        VerifyID(id);
         GHDFEntry Entry = _entries.get(id);
 
         if (Entry == null)
@@ -104,7 +104,7 @@ public class GHDFCompound
         }
     }
 
-    private void verifyID(int id)
+    private void VerifyID(int id)
     {
         if (id == 0)
         {
@@ -124,6 +124,7 @@ public class GHDFCompound
         // Constructors.
         public GHDFEntry(Object value)
         {
+            Value = value;
             if (value instanceof Byte)
             {
                 Type = GHDFType.Int8;
@@ -160,31 +161,31 @@ public class GHDFCompound
             {
                 Type = GHDFType.Compound;
             }
-            else if (value instanceof Byte[])
+            else if (value instanceof byte[])
             {
                 Type = GHDFType.Int8Array;
             }
-            else if (value instanceof Short[])
+            else if (value instanceof short[])
             {
                 Type = GHDFType.Int16Array;
             }
-            else if (value instanceof Integer[])
+            else if (value instanceof int[])
             {
                 Type = GHDFType.Int32Array;
             }
-            else if (value instanceof Long[])
+            else if (value instanceof long[])
             {
                 Type = GHDFType.Int64Array;
             }
-            else if (value instanceof Float[])
+            else if (value instanceof float[])
             {
                 Type = GHDFType.FloatArray;
             }
-            else if (value instanceof Double[])
+            else if (value instanceof double[])
             {
                 Type = GHDFType.DoubleArray;
             }
-            else if (value instanceof Boolean[])
+            else if (value instanceof boolean[])
             {
                 Type = GHDFType.BooleanArray;
             }
@@ -196,7 +197,10 @@ public class GHDFCompound
             {
                 Type = GHDFType.CompoundArray;
             }
-
+            else
+            {
+                throw new GHDFEntryException("Invalid entry type: %s".formatted(value.getClass().toString()));
+            }
         }
     }
 }
