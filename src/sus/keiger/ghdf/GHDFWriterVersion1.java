@@ -1,12 +1,15 @@
 package sus.keiger.ghdf;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class GHDFWriterVersion1 implements IGHDFWriter
@@ -21,7 +24,6 @@ class GHDFWriterVersion1 implements IGHDFWriter
     private final Map<GHDFType, TypeWriteMethod> _typeBasedWriteMethods = new HashMap<>();
 
     private final String EXTENSION = ".ghdf";
-
 
 
     // Constructors.
@@ -78,7 +80,18 @@ class GHDFWriterVersion1 implements IGHDFWriter
         {
             throw new IllegalArgumentException("filePath is null");
         }
-        Write(compound, new FileOutputStream(ChangeExtensionToGHDF(filePath)));
+
+        FileOutputStream FileStream = new FileOutputStream(ChangeExtensionToGHDF(filePath));
+        try
+        {
+            Write(compound, FileStream);
+            FileStream.close();
+        }
+        catch (Exception e)
+        {
+            FileStream.close();
+            throw e;
+        }
     }
 
     @Override
@@ -94,10 +107,18 @@ class GHDFWriterVersion1 implements IGHDFWriter
         }
 
         WriteMetadata(stream);
-        _typeBasedWriteMethods.get(GHDFType.Compound).Write(stream, compound);
+        ByteArrayOutputStream ByteStream = new ByteArrayOutputStream(4096);
+
+        _typeBasedWriteMethods.get(GHDFType.Compound).Write(ByteStream, compound);
+        ByteStream.writeTo(stream);
     }
 
     // Private methods.
+    private ByteBuffer GetByteBuffer(int size)
+    {
+        return ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);
+    }
+
     private String ChangeExtensionToGHDF(String path)
     {
         int Index = path.lastIndexOf('.');
@@ -111,11 +132,6 @@ class GHDFWriterVersion1 implements IGHDFWriter
             return "%s%s".formatted(path.substring(0, Index), EXTENSION);
         }
         return "%s%s".formatted(path, EXTENSION);
-    }
-
-    private ByteBuffer GetByteBuffer(int capacity)
-    {
-        return ByteBuffer.allocate(capacity).order(ByteOrder.LITTLE_ENDIAN);
     }
 
     private void VerifyID(int id)
@@ -302,7 +318,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
         try
         {
             Write7BitEncodedInt(stream, id);
-            stream.write(Byte.toUnsignedInt(type.GetByteData()));
+            stream.write(type.GetByteData() & 0xff);
             ChosenMethod.Write(stream, value);
         }
         catch (ClassCastException e)

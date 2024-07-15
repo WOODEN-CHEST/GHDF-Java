@@ -24,7 +24,7 @@ public class test
         NestedCompound.SetEntry(9, new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
         NestedCompound.SetEntry(10, new String[] { "a", "b", "c", "d", "e", "f", "g", "h" });
 
-        GHDFCompound[] CompoundArray = new GHDFCompound[100_000];
+        GHDFCompound[] CompoundArray = new GHDFCompound[1_000_000];
         Arrays.fill(CompoundArray, NestedCompound);
         Compound.SetEntry(1, CompoundArray);
 
