@@ -31,7 +31,7 @@ public enum GHDFType
 
 
     // Static fields.
-    public static final byte ARRAY_BIT = 0b1000000;
+    public static final byte ARRAY_BIT = (byte)0b1000_0000;
 
 
     // Private fields.
@@ -48,10 +48,10 @@ public enum GHDFType
     // Static methods.
     public static GHDFType ByteToEnum(byte value)
     {
-        if ((value & ARRAY_BIT) > 0)
+        if ((value & ARRAY_BIT) != 0)
         {
             byte ModifiedValue = (byte)(value & (~ARRAY_BIT));
-            return switch (value)
+            return switch (ModifiedValue)
             {
                 case 1 -> UInt8Array;
                 case 2 -> Int8Array;

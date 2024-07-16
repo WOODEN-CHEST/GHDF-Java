@@ -7,23 +7,14 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 class GHDFWriterVersion1 implements IGHDFWriter
 {
     // Private fields.
-    private final byte[] SIGNATURE = new byte[] { (byte)102, (byte)37, (byte)143, (byte)181, (byte)3,
-            (byte)205, (byte)123, (byte)185, (byte)148, (byte)157, (byte)98,
-            (byte)177, (byte)178, (byte) 151, (byte)43, (byte)170 };
-
     private final int VERSION = 1;
-
     private final Map<GHDFType, TypeWriteMethod> _typeBasedWriteMethods = new HashMap<>();
-
-    private final String EXTENSION = ".ghdf";
 
 
     // Constructors.
@@ -87,7 +78,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
             Write(compound, FileStream);
             FileStream.close();
         }
-        catch (Exception e)
+        catch (IOException e)
         {
             FileStream.close();
             throw e;
@@ -116,7 +107,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
     // Private methods.
     private ByteBuffer GetByteBuffer(int size)
     {
-        return ByteBuffer.allocate(size).order(ByteOrder.LITTLE_ENDIAN);
+        return ByteBuffer.allocate(size).order(GHDF.ENDIANNESS);
     }
 
     private String ChangeExtensionToGHDF(String path)
@@ -125,16 +116,16 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
         if (Index != -1)
         {
-            if (path.endsWith(EXTENSION))
+            if (path.endsWith(GHDF.EXTENSION))
             {
                 return path;
             }
-            return "%s%s".formatted(path.substring(0, Index), EXTENSION);
+            return "%s%s".formatted(path.substring(0, Index), GHDF.EXTENSION);
         }
-        return "%s%s".formatted(path, EXTENSION);
+        return "%s%s".formatted(path, GHDF.EXTENSION);
     }
 
-    private void VerifyID(int id)
+    private void VerifyID(int id) throws IOException
     {
         if (id == 0)
         {
@@ -144,7 +135,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteMetadata(OutputStream stream) throws IOException
     {
-        stream.write(SIGNATURE);
+        stream.write(GHDF.SIGNATURE);
         stream.write(GetByteBuffer(4).putInt(VERSION).array());
     }
 
@@ -153,7 +144,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
         long CurrentValue = value & 0xffffffffL;
         do
         {
-            stream.write((int)((CurrentValue & 0b1111_1111) | (CurrentValue > 0b0111_1111 ? 0b1000_0000 : 0)));
+            stream.write((int)((CurrentValue & 0b0111_1111) | (CurrentValue > 0b0111_1111 ? 0b1000_0000 : 0)));
             CurrentValue = CurrentValue >> 7;
         } while (CurrentValue > 0);
     }
@@ -223,11 +214,13 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteByteArray(OutputStream stream, byte[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         stream.write(array);
     }
 
     private void WriteShortArray(OutputStream stream, short[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         ByteBuffer Buffer = GetByteBuffer(2 * array.length);
         for (short Value : array)
         {
@@ -238,6 +231,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteIntArray(OutputStream stream, int[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         ByteBuffer Buffer = GetByteBuffer(4 * array.length);
         for (int Value : array)
         {
@@ -248,6 +242,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteLongArray(OutputStream stream, long[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         ByteBuffer Buffer = GetByteBuffer(8 * array.length);
         for (long Value : array)
         {
@@ -258,6 +253,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteFloatArray(OutputStream stream, float[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         ByteBuffer Buffer = GetByteBuffer(4 * array.length);
         for (float Value : array)
         {
@@ -268,6 +264,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteDoubleArray(OutputStream stream, double[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         ByteBuffer Buffer = GetByteBuffer(8 * array.length);
         for (double Value : array)
         {
@@ -278,6 +275,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteBooleanArray(OutputStream stream, boolean[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         byte[] Buffer = new byte[array.length];
         for (int i = 0; i < array.length; i++)
         {
@@ -288,6 +286,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteStringArray(OutputStream stream, String[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         for (String Value : array)
         {
             WriteString(stream, Value);
@@ -296,6 +295,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteCompoundArray(OutputStream stream, GHDFCompound[] array) throws IOException
     {
+        Write7BitEncodedInt(stream, array.length);
         for (GHDFCompound Value : array)
         {
             WriteCompound(stream, Value);

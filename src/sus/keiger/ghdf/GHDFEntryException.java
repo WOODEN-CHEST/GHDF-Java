@@ -1,6 +1,6 @@
 package sus.keiger.ghdf;
 
-public class GHDFEntryException extends GHDFException
+public class GHDFEntryException extends RuntimeException
 {
     // Constructors.
     public GHDFEntryException(String message)

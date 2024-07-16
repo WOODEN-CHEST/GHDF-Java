@@ -1,6 +1,8 @@
 package sus.keiger.ghdf;
 
-public class GHDFWriteException extends GHDFException
+import java.io.IOException;
+
+public class GHDFWriteException extends IOException
 {
     public GHDFWriteException(String message)
     {
