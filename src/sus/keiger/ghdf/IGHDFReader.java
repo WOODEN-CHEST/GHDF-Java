@@ -11,6 +11,11 @@ public interface IGHDFReader
         return new GHDFReaderVersion1();
     }
 
+    static IGHDFReader GetAutoDetectVersion()
+    {
+        return new GHDFReaderVersion1();
+    }
+
 
     // Methods.
     GHDFCompound Read(String filePath) throws IOException;
