@@ -5,10 +5,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 class GHDFWriterVersion1 implements IGHDFWriter
 {
@@ -33,6 +33,8 @@ class GHDFWriterVersion1 implements IGHDFWriter
         _typeBasedWriteMethods.put(GHDFType.Boolean, (stream, value) -> WriteBoolean(stream, (boolean)value));
         _typeBasedWriteMethods.put(GHDFType.String, (stream, value) -> WriteString(stream, (String)value));
         _typeBasedWriteMethods.put(GHDFType.Compound, (stream, value) -> WriteCompound(stream, (GHDFCompound)value));
+        _typeBasedWriteMethods.put(GHDFType.EncodedInteger,
+                (stream, value) -> WriteEncodedInteger(stream, (GHDFEncodedInteger) value));
 
         _typeBasedWriteMethods.put(GHDFType.Int8Array,
                 (stream, value) -> WriteByteArray(stream, (byte[])value));
@@ -60,6 +62,8 @@ class GHDFWriterVersion1 implements IGHDFWriter
                 (stream, value) -> WriteStringArray(stream, (String[])value));
         _typeBasedWriteMethods.put(GHDFType.CompoundArray,
                 (stream, value) -> WriteCompoundArray(stream, (GHDFCompound[])value));
+        _typeBasedWriteMethods.put(GHDFType.EncodedIntegerArray,
+                (stream, value) -> WriteEncodedIntegerArray(stream, (GHDFEncodedInteger[])value));
     }
 
 
@@ -67,38 +71,22 @@ class GHDFWriterVersion1 implements IGHDFWriter
     @Override
     public void Write(GHDFCompound compound, String filePath) throws IOException
     {
-        if (filePath == null)
-        {
-            throw new IllegalArgumentException("filePath is null");
-        }
-
-        FileOutputStream FileStream = new FileOutputStream(ChangeExtensionToGHDF(filePath));
-        try
+        Objects.requireNonNull(filePath, "filePath is null");
+        
+        try (FileOutputStream FileStream = new FileOutputStream(ChangeExtensionToGHDF(filePath)))
         {
             Write(compound, FileStream);
-            FileStream.close();
-        }
-        catch (IOException e)
-        {
-            FileStream.close();
-            throw e;
         }
     }
 
     @Override
     public void Write(GHDFCompound compound, OutputStream stream) throws IOException
     {
-        if (compound == null)
-        {
-            throw new IllegalArgumentException("compound is null");
-        }
-        if (stream == null)
-        {
-            throw new IllegalArgumentException("stream is null");
-        }
+        Objects.requireNonNull(compound, "compound is null");
+        Objects.requireNonNull(stream, "stream is null");
 
         WriteMetadata(stream);
-        ByteArrayOutputStream ByteStream = new ByteArrayOutputStream(4096);
+        ByteArrayOutputStream ByteStream = new ByteArrayOutputStream();
 
         _typeBasedWriteMethods.get(GHDFType.Compound).Write(ByteStream, compound);
         ByteStream.writeTo(stream);
@@ -125,7 +113,7 @@ class GHDFWriterVersion1 implements IGHDFWriter
         return "%s%s".formatted(path, GHDF.EXTENSION);
     }
 
-    private void VerifyID(int id) throws IOException
+    private void VerifyID(long id) throws IOException
     {
         if (id == 0)
         {
@@ -136,17 +124,18 @@ class GHDFWriterVersion1 implements IGHDFWriter
     private void WriteMetadata(OutputStream stream) throws IOException
     {
         stream.write(GHDF.SIGNATURE);
-        stream.write(GetByteBuffer(4).putInt(VERSION).array());
+        Write7BitEncodedInt(stream, VERSION);
     }
 
-    private void Write7BitEncodedInt(OutputStream stream, int value) throws IOException
+    private void Write7BitEncodedInt(OutputStream stream, long value) throws IOException
     {
-        long CurrentValue = value & 0xffffffffL;
+        long CurrentValue = value;
         do
         {
-            stream.write((int)((CurrentValue & 0b0111_1111) | (CurrentValue > 0b0111_1111 ? 0b1000_0000 : 0)));
-            CurrentValue = CurrentValue >> 7;
-        } while (CurrentValue > 0);
+            stream.write((int)((CurrentValue & 0b0111_1111)
+                    | ((CurrentValue > 0b0111_1111 || CurrentValue < 0) ? 0b1000_0000 : 0)));
+            CurrentValue = CurrentValue >>> 7;
+        } while (CurrentValue != 0);
     }
 
     private void WriteByte(OutputStream stream, byte value) throws IOException
@@ -186,18 +175,19 @@ class GHDFWriterVersion1 implements IGHDFWriter
 
     private void WriteString(OutputStream stream, String value) throws IOException
     {
-        Write7BitEncodedInt(stream, value.length());
-        stream.write(value.getBytes(StandardCharsets.UTF_8));
+        byte[] StringBytes = value.getBytes(StandardCharsets.UTF_8);
+        Write7BitEncodedInt(stream, StringBytes.length);
+        stream.write(StringBytes);
     }
 
     private void WriteCompound(OutputStream stream, GHDFCompound value) throws IOException
     {
         Write7BitEncodedInt(stream, value.Size());
 
-        int CurrentID = 0;
+        long CurrentID = 0;
         try
         {
-            for (int ID : value.GetIDs())
+            for (long ID : value.GetIDs())
             {
                 CurrentID = ID;
                 VerifyID(ID);
@@ -208,8 +198,13 @@ class GHDFWriterVersion1 implements IGHDFWriter
         {
 
             throw new GHDFWriteException("Failed to write compound entry with ID %s. Nested fail: { %s }"
-                    .formatted(CurrentID != 0 ? Integer.toString(CurrentID) : "[Invalid ID of 0]", e.getMessage()));
+                    .formatted(CurrentID != 0 ? Long.toString(CurrentID) : "[Invalid ID of 0]", e.getMessage()));
         }
+    }
+
+    private void WriteEncodedInteger(OutputStream stream, GHDFEncodedInteger value) throws IOException
+    {
+        Write7BitEncodedInt(stream, value.GetValue());
     }
 
     private void WriteByteArray(OutputStream stream, byte[] array) throws IOException
@@ -302,7 +297,16 @@ class GHDFWriterVersion1 implements IGHDFWriter
         }
     }
 
-    private void WriteEntry(OutputStream stream, int id, Object value, GHDFType type) throws IOException
+    private void WriteEncodedIntegerArray(OutputStream stream, GHDFEncodedInteger[] array) throws IOException
+    {
+        Write7BitEncodedInt(stream, array.length);
+        for (GHDFEncodedInteger Value : array)
+        {
+            Write7BitEncodedInt(stream, Value.GetValue());
+        }
+    }
+
+    private void WriteEntry(OutputStream stream, long id, Object value, GHDFType type) throws IOException
     {
         if (id == 0)
         {

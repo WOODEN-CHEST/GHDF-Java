@@ -34,6 +34,7 @@ class GHDFReaderVersion1 implements IGHDFReader
         _readMethods.put(GHDFType.Boolean, this::ReadBoolean);
         _readMethods.put(GHDFType.String, this::ReadString);
         _readMethods.put(GHDFType.Compound, this::ReadCompound);
+        _readMethods.put(GHDFType.EncodedInteger, this::ReadEncodedInteger);
         _readMethods.put(GHDFType.Int8Array, this::ReadByteArray);
         _readMethods.put(GHDFType.UInt8Array, this::ReadByteArray);
         _readMethods.put(GHDFType.Int16Array, this::ReadShortArray);
@@ -47,6 +48,7 @@ class GHDFReaderVersion1 implements IGHDFReader
         _readMethods.put(GHDFType.BooleanArray, this::ReadBooleanArray);
         _readMethods.put(GHDFType.StringArray, this::ReadStringArray);
         _readMethods.put(GHDFType.CompoundArray, this::ReadCompoundArray);
+        _readMethods.put(GHDFType.EncodedIntegerArray, this::ReadEncodedIntegerArray);
     }
 
 
@@ -54,19 +56,10 @@ class GHDFReaderVersion1 implements IGHDFReader
     @Override
     public GHDFCompound Read(String filePath) throws IOException
     {
-        InputStream FileStream = new FileInputStream(filePath);
-        GHDFCompound Compound;
-        try
+        try (InputStream FileStream = new FileInputStream(filePath))
         {
-            Compound = Read(FileStream);
-            FileStream.close();
+            return Read(FileStream);
         }
-        catch (Exception e)
-        {
-            FileStream.close();
-            throw e;
-        }
-        return Compound;
     }
 
     @Override
@@ -97,6 +90,11 @@ class GHDFReaderVersion1 implements IGHDFReader
 
 
     // Private methods.
+    private boolean IsValidLengthBounds(long length)
+    {
+        return (length <= Integer.MAX_VALUE) && (length >= 0L);
+    }
+
     private byte ReadByte(ByteBuffer data)
     {
         return data.get();
@@ -147,7 +145,7 @@ class GHDFReaderVersion1 implements IGHDFReader
     private String ReadString(ByteBuffer data) throws IOException
     {
         long Length = Read7BitEncodedInt(data);
-        if (Length < 0)
+        if (!IsValidLengthBounds(Length))
         {
             throw new GHDFReadException("Reader does not support strings longer than (2^31 - 1) bytes.");
         }
@@ -160,7 +158,11 @@ class GHDFReaderVersion1 implements IGHDFReader
     private GHDFCompound ReadCompound(ByteBuffer data) throws IOException
     {
         GHDFCompound Compound = new GHDFCompound();
-        int EntryCount = Read7BitEncodedInt(data);
+        long EntryCount = Read7BitEncodedInt(data);
+        if (!IsValidLengthBounds(EntryCount))
+        {
+            throw new GHDFReadException("Reader does not support compounds with more than (2^31 - 1) entries");
+        }
 
         for (int i = 0; i < EntryCount; i++)
         {
@@ -168,6 +170,11 @@ class GHDFReaderVersion1 implements IGHDFReader
         }
 
         return Compound;
+    }
+
+    private GHDFEncodedInteger ReadEncodedInteger(ByteBuffer data) throws IOException
+    {
+        return new GHDFEncodedInteger(Read7BitEncodedInt(data));
     }
 
     private byte[] ReadByteArray(ByteBuffer data) throws IOException
@@ -266,17 +273,28 @@ class GHDFReaderVersion1 implements IGHDFReader
         return Values;
     }
 
+    private GHDFEncodedInteger[] ReadEncodedIntegerArray(ByteBuffer data) throws IOException
+    {
+        int Length = GetArrayLength(data);
+        GHDFEncodedInteger[] Values = new GHDFEncodedInteger[Length];
+        for (int i = 0; i < Length; i++)
+        {
+            Values[i] = ReadEncodedInteger(data);
+        }
+        return Values;
+    }
+
     private int GetArrayLength(ByteBuffer data) throws IOException
     {
-        int Length = Read7BitEncodedInt(data);
-        if (Length < 0)
+        long Length = Read7BitEncodedInt(data);
+        if (!IsValidLengthBounds(Length))
         {
             throw new GHDFReadException("Reader does not support arrays longer than (2^31 - 1) bytes.");
         }
-        return Length;
+        return (int)Length;
     }
 
-    private void VerifyID(int id) throws IOException
+    private void VerifyID(long id) throws IOException
     {
         if (id == 0)
         {
@@ -296,7 +314,7 @@ class GHDFReaderVersion1 implements IGHDFReader
 
     private void VerifyVersion(ByteBuffer data) throws IOException
     {
-        int DataVersion = data.getInt();
+        long DataVersion = Read7BitEncodedInt(data);
         if (DataVersion != VERSION)
         {
             throw new GHDFReadException("Unsupported GHDF data version: %d, supported: %d)".formatted(
@@ -304,15 +322,15 @@ class GHDFReaderVersion1 implements IGHDFReader
         }
     }
 
-    private int Read7BitEncodedInt(ByteBuffer data) throws IOException
+    private long Read7BitEncodedInt(ByteBuffer data) throws IOException
     {
-        int Value = 0;
+        long Value = 0;
         byte CurrentByte;
         int ByteIndex = 0;
         do
         {
             CurrentByte = data.get();
-            Value = Value | ((CurrentByte & 0b0111_1111) << (ByteIndex * 7));
+            Value = Value | ((long)(CurrentByte & 0b0111_1111) << (ByteIndex * 7));
             ByteIndex++;
         }
         while ((CurrentByte & 0b1000_0000) != 0);
@@ -321,7 +339,7 @@ class GHDFReaderVersion1 implements IGHDFReader
 
     private void ReadEntry(ByteBuffer data, GHDFCompound compound) throws IOException
     {
-        int ID = Read7BitEncodedInt(data);
+        long ID = Read7BitEncodedInt(data);
         VerifyID(ID);
 
         GHDFType EntryType;
