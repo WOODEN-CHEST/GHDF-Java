@@ -4,6 +4,6 @@ This implementation is almost on par with the specification found here: https://
 
 It has two differeces: 
 
-1: Lengths for compounds, arrays and strings are limited to a maximum value of (2^31 - 1) rather than (2^32 - 1) as specified in the specification. 
+1: Lengths for compounds, arrays and strings are limited to a maximum value of (2^31 - 1) rather than (2^64 - 1) as specified in the specification. 
 
 2: Unsigned integers are not fully supported. All unsigned integer types are converted to signed types when reading or writing.
