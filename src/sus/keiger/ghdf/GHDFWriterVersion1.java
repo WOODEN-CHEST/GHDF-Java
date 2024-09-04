@@ -76,7 +76,13 @@ class GHDFWriterVersion1 implements IGHDFWriter
         Objects.requireNonNull(filePath, "filePath is null");
         String ModifiedPath = ChangeExtensionToGHDF(filePath);
 
-        Files.deleteIfExists(Path.of(ModifiedPath));
+        Path FilePath = Path.of(ModifiedPath);
+        if (Files.isDirectory(FilePath))
+        {
+            throw new GHDFWriteException("Given path \"%s\" points to a directory".formatted(ModifiedPath));
+        }
+        Files.deleteIfExists(FilePath);
+
         try (FileOutputStream FileStream = new FileOutputStream(ModifiedPath))
         {
             Write(compound, FileStream);
