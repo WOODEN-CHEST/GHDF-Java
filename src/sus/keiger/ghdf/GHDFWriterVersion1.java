@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -72,8 +74,10 @@ class GHDFWriterVersion1 implements IGHDFWriter
     public void Write(GHDFCompound compound, String filePath) throws IOException
     {
         Objects.requireNonNull(filePath, "filePath is null");
-        
-        try (FileOutputStream FileStream = new FileOutputStream(ChangeExtensionToGHDF(filePath)))
+        String ModifiedPath = ChangeExtensionToGHDF(filePath);
+
+        Files.deleteIfExists(Path.of(ModifiedPath));
+        try (FileOutputStream FileStream = new FileOutputStream(ModifiedPath))
         {
             Write(compound, FileStream);
         }
