@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="GHDF">
+    <output-path>$PROJECT_DIR$/out/artifacts/GHDF</output-path>
+    <root id="archive" name="GHDF.jar">
+      <element id="module-output" name="GHDF_Java" />
+    </root>
+  </artifact>
+</component>

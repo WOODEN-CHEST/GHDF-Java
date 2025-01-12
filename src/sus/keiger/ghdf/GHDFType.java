@@ -15,6 +15,7 @@ public enum GHDFType
     Boolean((byte)11, false),
     String((byte)12, false),
     Compound((byte)13, false),
+    EncodedInteger((byte)14, false),
     UInt8Array((byte)1, true),
     Int8Array((byte)2, true),
     UInt16Array((byte)3, true),
@@ -27,7 +28,8 @@ public enum GHDFType
     DoubleArray((byte)10, true),
     BooleanArray((byte)11, true),
     StringArray((byte)12, true),
-    CompoundArray((byte)13, true);
+    CompoundArray((byte)13, true),
+    EncodedIntegerArray((byte)14, true);
 
 
     // Static fields.
@@ -66,6 +68,7 @@ public enum GHDFType
                 case 11 -> BooleanArray;
                 case 12 -> StringArray;
                 case 13 -> CompoundArray;
+                case 14 -> EncodedIntegerArray;
                 default -> throw new GHDFTypeException("Invalid type byte value: %d".formatted(value));
             };
         }
@@ -85,6 +88,7 @@ public enum GHDFType
             case 11 -> Boolean;
             case 12 -> String;
             case 13 -> Compound;
+            case 14 -> EncodedInteger;
             default -> throw new GHDFTypeException("Invalid type byte value: %d".formatted(value));
         };
     }

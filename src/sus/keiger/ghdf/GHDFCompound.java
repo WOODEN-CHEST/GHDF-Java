@@ -5,38 +5,38 @@ import java.util.*;
 public class GHDFCompound
 {
     // Private fields.
-    private final Map<Integer, GHDFEntry> _entries = new HashMap<>();
+    private final Map<Long, GHDFEntry> _entries = new HashMap<>();
 
 
     // Methods.
-    public void SetEntry(int id, Object value)
+    public void SetEntry(long id, Object value)
     {
         VerifyID(id);
         _entries.put(id, new GHDFEntry(value));
     }
 
-    public void RemoveEntry(int id)
+    public void RemoveEntry(long id)
     {
         VerifyID(id);
         _entries.remove(id);
     }
 
-    public <T> T GetEntry(int id)
+    public <T> T GetEntry(long id)
     {
         return GetEntry(id, null, null, false);
     }
 
-    public <T> T GetOrElse(int id, T elseValue)
+    public <T> T GetOrElse(long id, T elseValue)
     {
         return GetEntry(id, elseValue, null, false);
     }
 
-    public <T> T GetVerifiedEntry(int id, GHDFType expectedType)
+    public <T> T GetVerifiedEntry(long id, GHDFType expectedType)
     {
         return GetEntry(id, null, expectedType, true);
     }
 
-    public <T> T GetVerifiedOptionalEntry(int id, GHDFType expectedType)
+    public <T> T GetVerifiedOptionalEntry(long id, GHDFType expectedType)
     {
         return GetEntry(id, null, expectedType, false);
     }
@@ -46,7 +46,7 @@ public class GHDFCompound
         _entries.clear();
     }
 
-    public GHDFType GetTypeOfEntry(int id)
+    public GHDFType GetTypeOfEntry(long id)
     {
         GHDFEntry Entry = _entries.get(id);
         if (Entry == null)
@@ -56,7 +56,7 @@ public class GHDFCompound
         return Entry.Type;
     }
 
-    public Set<Integer> GetIDs()
+    public Set<Long> GetIDs()
     {
         return _entries.keySet();
     }
@@ -74,7 +74,7 @@ public class GHDFCompound
 
     // Private methods.
     @SuppressWarnings("unchecked")
-    private <T> T GetEntry(int id, T elseValue, GHDFType expectedType, boolean isMandatory)
+    private <T> T GetEntry(long id, T elseValue, GHDFType expectedType, boolean isMandatory)
     {
         VerifyID(id);
         GHDFEntry Entry = _entries.get(id);
@@ -104,7 +104,7 @@ public class GHDFCompound
         }
     }
 
-    private void VerifyID(int id)
+    private void VerifyID(long id)
     {
         if (id == 0)
         {
@@ -161,6 +161,10 @@ public class GHDFCompound
             {
                 Type = GHDFType.Compound;
             }
+            else if (value instanceof GHDFEncodedInteger)
+            {
+                Type = GHDFType.EncodedInteger;
+            }
             else if (value instanceof byte[])
             {
                 Type = GHDFType.Int8Array;
@@ -196,6 +200,10 @@ public class GHDFCompound
             else if (value instanceof GHDFCompound[])
             {
                 Type = GHDFType.CompoundArray;
+            }
+            else if (value instanceof GHDFEncodedInteger[])
+            {
+                Type = GHDFType.EncodedIntegerArray;
             }
             else
             {

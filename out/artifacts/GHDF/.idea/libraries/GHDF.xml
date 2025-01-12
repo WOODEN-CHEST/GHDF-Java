@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="GHDF">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/GHDF.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
