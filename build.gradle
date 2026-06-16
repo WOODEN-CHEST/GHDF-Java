@@ -1,0 +1,22 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'sus.keiger'
+version = '1.0.0'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+        }
+        resources {
+            srcDirs = []
+        }
+    }
+}
+
+tasks.named('jar') {
+    archiveFileName = 'GHDF.jar'
+    destinationDirectory = layout.projectDirectory.dir('out')
+}
